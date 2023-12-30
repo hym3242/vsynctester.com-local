@@ -1,0 +1,1384 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+<title>Web browser "VSYNC synchronization", display Hz, and input lag tester</title>
+<link rel=stylesheet type="text/css" href="css/styles.css">
+<script type="text/javascript" src="js/common.js" async></script>
+</head>
+<body background="images/background.jpg" text="#000000" link="#0000FF" alink="#FF0000" vlink="#663366"><center>
+
+<!-- Chrome is broken warning -->
+<div style="display:none" id="chromewarning">
+<center><table class="grayborder" width="1200" bgcolor="#FFFFD0" cellpadding=3 cellspacing=0 border=0><tr><td align=center>
+<font size="+1"><b>Google Chrome has VSYNC issues</b> -- <a href="chromeisbroken.html">You can help get Chrome fixed!</a></font><br>
+ <div id="chrometestdiv"><small>
+ <a href="javascript:runChromeTest(0)">Test for the Chrome bug</a>
+ <font color=gray>(switches to a larger 44MP background image)</font>
+ </small></div>
+</td></tr></table></center>
+</div>
+
+<!-- Firefox is broken warning -->
+<div style="display:none" id="firefoxwarning">
+<center><table class="grayborder" width="1200" bgcolor="#FFFFD0" cellpadding=3 cellspacing=0 border=0><tr><td align=center>
+<font size="+2" color=red><b>Firefox is hopelessly broken (timers/vsync/etc) -- DO NOT USE!</b></font><br>
+<font size="+1"><b>VSYNC in Firefox under Windows is broken</b> -- <a href="firefoxisbroken.html">Details</a></font>
+</td></tr></table></center>
+</div>
+
+<!-- Edge/IE is broken warning -->
+<div style="display:none" id="edgeiewarning">
+<center><table class="grayborder" width="1200" bgcolor="#FFFFD0" cellpadding=3 cellspacing=0 border=0><tr><td align=center>
+<font size="+1"><b>Edge and IE do not support high Hz displays</b> -- <a href="edgeieisbroken.html">Details</a></font>
+</td></tr></table></center>
+</div>
+
+
+<!-- Title/subtitle -->
+<table cellpadding=0 cellspacing=0 border=0><tr>
+<td align=center>
+ <font color="blue" size=6>Web browser "VSYNC synchronization" tester</font><br>
+ <tt>vsynctester.com</tt> - <i>A novel way to EASILY verify web browser VSYNC synchronization, display Hz, and input lag!</i><br>
+ </td>
+<td width=40>&nbsp;</td>
+<td>
+ <a title="Show/Hide test options" href="javascript:toggleoptions()"><img alt="" width=50 height=50 src="images/gear.gif" border=0></a>
+ </td>
+<td valign=middle>
+ &nbsp; <a href="manual.html">How it works</a>
+ </td>
+</tr></table>
+<br>
+
+<!-- test options: click on 'gear' icon to show/hide -->
+<span id="testoptions" style="display:none">
+<table class="grayborder" width="1200" bgcolor="#FFFFFF" cellpadding=3 cellspacing=0 border=0><tr><td>
+  <input type="checkbox" id="wantvsyncindicator" checked> VSYNC indicator, rgb <input id="vgray" type="text" size=3 value="224"> (0-255)<br>
+  <input type="checkbox" id="wantperformancegraph" checked> Performance graph, scale <input id="vgraphscale" type="text" size=2 value="20"> ms (1-100)<br>
+    &nbsp; &nbsp; <input type="checkbox" id="wantvsyncoffsetline" checked>frame VSYNC offset <font color=gray>(blue)</font> <input type="checkbox" id="wantlockedvo">locked<br>
+    &nbsp; &nbsp; <input type="checkbox" id="wantlateline">'late' / vsync offset per rAF time <font color=gray>(purple)</font><br>
+    &nbsp; &nbsp; <input type="checkbox" id="wantinterframeline" checked>inter-frame <font color=gray>(green/red)</font> <i>right scale</i><br>
+    &nbsp; &nbsp; <input type="checkbox" id="wantrenderline">render time <font color=gray>(brown)</font>
+           &nbsp; <input type="checkbox" id="wantspinwaitline">'spin-wait' <font color=gray>(gray)</font><br>
+  <input type="checkbox" id="wantraftimearg">Use rAF time arg as frame time<br>
+</td><td valign=top>
+  <input type="checkbox" id="wantcustomhz"> Custom <input id="vcustomhz" type="text" size=6 value="59.8031"> Hz (1-500), skew <input id="vskew" type="text" size=2 value="0"> ms (0-25)<br>
+    &nbsp; &nbsp; <input type="checkbox" id="wantspinwait" checked>Precise timing via spin wait up to <input id="vspinms" type="text" size=2 value="1"> ms (1-9)<br>
+    &nbsp; &nbsp; <input type="checkbox" id="wantmaxsettimeout">Maximum setTimeout() ms of <input id="vmaxsettimeoutms" type="text" size=2 value="10"> ms (9-50)<br>
+  <input type="checkbox" id="wantbackimage" checked> Background images <input id="vmegapixels" type="text" size=2 value="15"> MP (1-99)  <input type="checkbox" id="wantbackpreview" checked>Preview<br>
+   &nbsp; &nbsp; Use up to <input id="vnumbackimages" type="text" size=1 value="20"> (1-20) images
+    <input type="checkbox" id="wantbistress"> Stress
+    <br>
+   &nbsp; &nbsp; Scroll <input id="vpixperframe" type="text" size=1 value="3"> pixels/frame (1-50)<br>
+</td><td valign=top>
+  <input type="checkbox" id="wantmouseindicator" checked> Mouse input lag indicator <input id="vmouseframes" type="text" size=2 value="3"> frames (0-9)<br>
+  <input type="checkbox" id="wantoddpredelay"> Odd <input type="checkbox" id="wantevenpredelay"> Even frame pre-delay to <input id="vpredelay" type="text" size=2 value="1.0"> ms (0-20)<br>
+  <input type="checkbox" id="wantoddpostdelay"> Odd <input type="checkbox" id="wantevenpostdelay"> Even frame post-delay to <input id="vpostdelay" type="text" size=2 value="5.5"> ms (0-20)<br>
+  <input type="checkbox" id="wanttearhelper"> Tear helper/bar <input id="vtearwidth" type="text" size=2 value="10"> pixels (1-20)<br>
+  <input type="checkbox" id="wantdropframes"> Drop 1 in every <input id="vdropframes" type="text" size=2 value="59"> frames (1-200)<br>
+  <input type="checkbox" id="wantframegrid"> Frames indicator <input id="vframepix" type="text" size=2 value="21"> pixels (5-33)<br>
+</td></tr></table>
+<font size=1><br></font>
+</span>
+
+<!-- animation window is an HTML5 canvas -->
+<!-- BUGBUG: do not place border on canvas (place on table instead): crbug.com/464034 -->
+<table class="grayborder" border=0 cellpadding=0 cellspacing=0><tr><td>
+  <canvas id="can" width=1200 height=600></canvas>
+  </td></tr></table>
+
+<!-- end/copyright -->
+<font color=gray><span id=ua></span></font><br>
+  Copyright &copy; 2023 Jerry Jongerius
+  &middot; <a href="http://www.duckware.com/support/contact.html">Contact Us</a>
+  &middot; <a href="javascript:runtest(1)">RT</a>
+  &middot; <a href="javascript:runtest(4)">RT&times;4</a>
+  <br><br>
+
+  <table cellpadding=4 bgcolor="#fcfcfc" class=grayborder><tr><td valign=top>
+    <div>
+    <b>Web Browsers</b><br>
+      &middot; <a href="chromeisbroken.html">Chrome is broken</a><br>
+      &middot; <a href="firefoxisbroken.html">Firefox is broken</a><br>
+      &middot; <a href="edgeieisbroken.html">Edge/IE is broken</a><br>
+    </div>
+  </td><td width=30>&nbsp;</td><td valign=top>
+    <div>
+    <b>Other Test Tools</b><br>
+      &middot; <a href="https://www.displayhz.com">Display Hz Tester</a><br>
+      &middot; <a href="gputest.html">GPU memory usage</a><br>
+      &middot; <a href="detect.html">Older Display Hz test</a><br>
+    </div>
+  </td><td width=30>&nbsp;</td><td valign=top>
+    <div>
+    <b>Learn More</b><br>
+      &middot; <a href="howtocomputevsync.html">How to compute VSYNC / Hz</a><br>
+      &middot; <a href="game.html">Input lag in HTML5 games</a><br>
+      &middot; <a href="testing/mouse.html">Mouse input performance</a><br>
+    </div>
+  </td><td width=30>&nbsp;</td><td valign=top>
+    <div>
+    <b>Other Cool Sites</b><br>
+      &middot; <a href="http://www.lagom.nl/lcd-test/">LCD Monitor Tests</a><br>
+      &middot; <a href="https://www.blurbusters.com">Blur Busters</a><br>
+      &middot; <a href="http://www.cfspeed.com">Internet download speed</a><br>
+    </div>
+  </td></tr></table>
+
+<!-- inline test code -->
+<script type="text/javascript">
+"use strict";
+//
+//  Copyright (c) 2023 Jerry Jongerius (http://www.duckware.com/support/contact.html)
+//
+(function(){
+  var TIMES="\xD7"; // D7=&times;
+
+  //----------------------------------------------------------------------
+  function el(name) {
+    return document.getElementById(name);
+    }
+  //----------------------------------------------------------------------
+  function myH(s) {
+    var ret = "";
+    var max = s.length;
+    for (var loop=0; loop<max; ++loop) {
+      ret += '&'+"#"+s.charCodeAt(loop);
+      }
+    return ret;
+    }
+
+  el("ua").innerHTML = myH(navigator.userAgent);
+
+  //----------------------------------------------------------------------
+  var elCanvas=el("can");
+  var elPerformanceGraph=el("wantperformancegraph");
+  var elFrameGrid=el("wantframegrid");
+  var elVsyncIndicator=el("wantvsyncindicator");
+  var elOddPreDelay=el("wantoddpredelay");
+  var elEvenPreDelay=el("wantevenpredelay");
+  var elOddPostDelay=el("wantoddpostdelay");
+  var elEvenPostDelay=el("wantevenpostdelay");
+  var elTearHelper=el("wanttearhelper");
+  var elBackImage=el("wantbackimage");
+  var elMaxSetTimeout=el("wantmaxsettimeout");
+  var elCustomHz=el("wantcustomhz");
+  var elWantSpinWait=el("wantspinwait");
+  var elWantBackPreview=el("wantbackpreview");
+  var elDropFrames=el("wantdropframes");
+  var elWantBackgroundImageStress=el("wantbistress");
+  var elWantRafTimeArg=el("wantraftimearg");
+  var g_bIE=navigator.userAgent.indexOf("Trident")>0;
+  var g_bDebug=false;     // bool: display extra debug message (true) or not (false)
+  var g_loading=null;     // string: when non-null, displays loading images message (or error message), "ok" special case
+  var g_nFrame=0;         // int: frame number counter
+  var g_nTicks=0;         // int: number of time ticks
+  var g_pano;             // image: background image
+  var g_xpos=0;           // int: background image position
+  var g_rvsync;           // image: red vsync
+  var g_cvsync;           // image: cyan vsync
+  var g_bUsingRAF=true;   // bool: use requestAnimationFrame (true) or custom hz via setTimeout (false)
+  var g_tAlignment=0;     // double: align custom hz to this time
+  var g_tSpin;            // double: ms time spent spin-waiting (in the current frame)
+  var g_tLate;            // double: ms time timer callback was called back late (in the current frame)
+  var g_tid="";           // string: debug: timer info id
+  var g_tani=0;           // double: ave time to animate
+
+
+  //----------------------------------------------------------------------
+  // monotonically increasing millisecond tick count
+  var tick=(function(){
+    var perf=window.performance;
+    var tPrev=0;          // double: last time
+    var tSum=0;           // double: sum of all positive time adjustments
+    if (!Date.now) {
+      Date.now = function now(){return new Date().getTime();};
+      }
+    function mytick() {
+      ++g_nTicks;
+      var tNow = perf ? perf.now() : Date.now();     // iOS Safari does NOT have high-res time
+      var tAdjust = tNow-tPrev;
+      if (tAdjust<0) {
+        console.log( "TIME RUNNING BACKWARDS "+tPrev+"->"+tNow );  // should never happen, but we want to know if it does
+        }
+      tPrev = tNow;
+      tSum += (tAdjust>0) ? tAdjust : 0;
+      return tSum;
+      }
+    return mytick;
+    })();
+  //----------------------------------------------------------------------
+  // get element value
+  function getV(id,vmin,vmax,vdef) {
+    var v = el(id).value;
+    var vv = v*1;
+    return (v && vv>=vmin && vv<=vmax) ? vv : vdef;
+    }
+  //----------------------------------------------------------------------
+  var setNextTimeout=(function(){
+    var tNext=0;                        // double: time of NEXT interval
+    var tWakeup=0;                      // double: setTimeout() callback should be called on/after this time
+    var nLastHz=0;                      // double: last custom hz we used
+    //
+    function getCustomHz() {
+      var xhz = getV("vcustomhz",1,500,60);
+      if (xhz!=nLastHz) {
+        HZ.reset("Custom Hz changed to "+xhz);
+        nLastHz = xhz;
+        }
+      return xhz;
+      }
+    //
+    function haveTimeout() {
+      var tNow = tick();
+      var tStart = tNow;
+      g_tLate = tNow-tWakeup;
+      while ((tNow<tWakeup) || (tNow<tNext&&elWantSpinWait.checked)) {
+        tNow = tick();
+        }
+      g_tSpin = tNow-tStart;
+      var TICKMS = 1000/getCustomHz();
+      var tOn = Math.max(tNow,tNext+1);
+      //
+      var tAlignment = g_tAlignment+getV("vskew",-25,25,0);
+      tNext = tOn - ((tOn-tAlignment)%TICKMS+TICKMS)%TICKMS + TICKMS;
+      animate(tNow,false);
+      }
+    //
+    function doSetNextTimeout() {
+      var nSpinWait = elWantSpinWait.checked ? getV("vspinms",1,9,1) : 0;
+      var tNow = tick();
+      var ms = Math.max(1,tNext-tNow-nSpinWait);
+      tWakeup = tNow+ms;
+      if (elMaxSetTimeout.checked && ms>getV("vmaxsettimeoutms",9,50,10)) {
+        setTimeout(doSetNextTimeout,4);
+        }
+      else {
+        // BUGBUG: removed crbug.com/328700 adjustment (fixed in Canary 46.0.2472.0).
+        // We want to see raw browser timer (in)accuracy in the performance graph lines.
+        var id = setTimeout(haveTimeout, ms);
+        g_tid = "tid="+id;
+        }
+      }
+    //
+    return doSetNextTimeout;
+    })();
+
+  // HACK: this is to mimic internal browser implementations.  In both rAF
+  // and custom implementation (by design), when switching over, first
+  // callback fires 'too soon', so this flags allows us to skip that frame
+  var g_bSkipNext=false;
+
+  //----------------------------------------------------------------------
+  function scheduleNextFrame() {
+    var bSkipThis=g_bSkipNext;
+    if (elCustomHz.checked) {
+      if (g_bUsingRAF) {
+        g_bUsingRAF = false;
+        var si = HZ.snap();                   // capture state before we HZ.reset()
+        HZ.reset("Switching to custom Hz");
+        g_bSkipNext = true;
+        var tt = tick();
+        g_tAlignment = tt-HZ.vso(tt,si);      // custom hz alignment is current time aligned to vsync
+        }
+      setNextTimeout();
+      }
+    else {
+      if (!g_bUsingRAF) {
+        g_bUsingRAF = true;
+        HZ.reset("Switching to rAF");
+        g_bSkipNext = !g_bIE;  // but not IE
+        }
+      var id = window.requestAnimationFrame(rafcallback);
+      g_tid = "rAF="+id;
+      }
+    if (bSkipThis) {
+      g_bSkipNext = false;
+      }
+    return !bSkipThis;  // should current frame be rendered
+    }
+
+  //----------------------------------------------------------------------
+  var isUseRafTime=(function(){
+    var bPrevUse=false;
+    function isUse() {
+      var bUse = elWantRafTimeArg.checked;
+      if (bUse!=bPrevUse) {
+        HZ.reset("'Use rAF time' changed");
+        }
+      bPrevUse = bUse;
+      return bUse;
+      }
+    return isUse;
+    })();
+
+  //----------------------------------------------------------------------
+  // The time argument passed to the rAF callback -- according to the official spec -- should
+  // be 'now' (current time).  There is a proposal to get this changed to the VSYNC time.
+  //  - Chrome since 2015/05/28 has passed in the vsync time as time argument.
+  //  - Firefox passes in a faked vsync time (or 'now' on error) and is very buggy
+  //  - Safari passes in the 'now' time
+  function rafcallback( tRAF ) {
+    var tNow = tick();
+    var bFaked = RAF.add(tRAF);
+    var tFrame = isUseRafTime()?tRAF:tNow;
+    g_tSpin = 0;
+    // NOTE: when there is no performance.now(), g_tLate will not work -- but will NOT happen on any modern web browser
+    g_tLate = tNow-tRAF;  // validate web browser tRAF value
+    //todo: if 'late' time difference is too great, warn
+    animate(tFrame, bFaked);
+    }
+  //----------------------------------------------------------------------
+  function animate( tFrame, bFaked ) {
+    var tid = g_tid;
+    if (scheduleNextFrame()) {
+      if (!paintLoadingMessage()) {
+        var tBegin=tick();
+        doRenderAnimationFrame(tFrame, tid);
+        var ms = tick()-tBegin;
+        GRAPH.finish( ms, bFaked );
+        g_tani = (g_tani*7+ms)/8;
+        ++g_nFrame;
+        }
+      }
+    }
+  //----------------------------------------------------------------------
+  function paintLoadingMessage() {
+    var ret = g_loading;
+    if (g_loading) {
+      var ctx = elCanvas.getContext("2d");
+      clearCanvas(ctx,"#F8F8F8");
+      ctx.font = "14pt Arial";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#000000";
+      // BUGBUG: 'initializing' message needed because first image manipulation is VERY slow in Chrome (much faster in IE)
+      ctx.fillText( (g_loading=="ok")?"Initializing (waiting for web browser)...":g_loading, 5, 20 );
+      if (g_loading=="ok") {
+        g_loading = null;
+        }
+      }
+    return ret;
+    }
+  //----------------------------------------------------------------------
+  function clearCanvas( ctx, style ) {
+    if (ctx) {
+      ctx.fillStyle = style;
+      ctx.fillRect( 0, 0, elCanvas.width, elCanvas.height );
+      }
+    }
+
+  //----------------------------------------------------------------------
+  function doRenderAnimationFrame( tFrame, tid ) {
+    addPreDelay( tFrame );
+    var dout = tid+"  nFrame="+g_nFrame;
+    var bDropFrame = elDropFrames.checked ? !(g_nFrame%getV("vdropframes",1,200,59)) : false;
+    // on a dropped frame, all internal calculations continue, but there is no painting to the display
+    var ctx = bDropFrame ? null : elCanvas.getContext("2d");
+    var n = 255;   //getV("vbackground",0,255,248);
+    clearCanvas(ctx,"rgb("+n+","+n+","+n+")");
+    var dinfo = HZ.add(tFrame);
+    var fps = calcFPS(tFrame);
+    paintBackgroundImage( ctx );
+    paintTearHelper( ctx );
+    paintFrameGrid( ctx );
+    paintVsyncIndicator( ctx, fps );
+    GRAPH.paint( ctx, tFrame, fps, g_tSpin, g_tLate );
+    paintDebugOut( ctx, dout+"  "+dinfo );
+    MOUSE.paint( ctx, tFrame, HZ.calc() || fps );
+    addPostDelay( tFrame );
+    }
+
+  //----------------------------------------------------------------------
+  function addPreDelay( tFrame ) {
+    addDelay( tFrame, (g_nFrame&1&&elOddPreDelay.checked) ? getV("vpredelay",0,20,1) : ((g_nFrame+1)&1&&elEvenPreDelay.checked) ? getV("vpredelay",0,20,1) : 0 );
+    }
+  //----------------------------------------------------------------------
+  function addPostDelay( tFrame ) {
+    addDelay( tFrame, (g_nFrame&1&&elOddPostDelay.checked) ? getV("vpostdelay",0,20,1) : ((g_nFrame+1)&1&&elEvenPostDelay.checked) ? getV("vpostdelay",0,20,1) : 0 );
+    }
+  //----------------------------------------------------------------------
+  function addDelay( tFrame, delay ) {
+    while (delay && (tick()-tFrame)<delay) {
+      }
+    }
+  //----------------------------------------------------------------------
+  function paintDebugOut( ctx, out ) {
+    if (ctx && g_bDebug) {
+      ctx.textAlign = "left";
+      ctx.font = "10pt Arial";
+      ctx.fillStyle = "#000000";
+      ctx.fillText( "Debug: "+out, 2, 12 );
+      }
+    }
+
+  //----------------------------------------------------------------------
+  // Detect when web browser fakes the rAF callback vsync time arg
+  //   - a run of frames with inter-frame times too perfectly flat
+  //   - fake hz nearly a perfect integer
+  //   - real measured hz slightly away from integer
+  //   - and then a sudden not-large jump (don't want skipped frames to trigger)
+  // See: http://www.vsynctester.com/firefoxisbroken.html
+  var RAF=(function(){
+    var L0,L1;            // last two rAF argument times
+    var nRun=0;           // number of runs with same difference
+    var m_hz;             // last 'faked' hz found
+    //
+    function calc() {
+      return m_hz;
+      }
+    //
+    function add(tRAF) {
+      var bSame = Math.abs(tRAF-L1-L1+L0)<.000001;
+      var h1 = 1000/(L1-L0);
+      var bFaked = !bSame && nRun>7 && (tRAF-L1)/(L1-L0)<1.6 && Math.abs(1-h1%1)<.00001;
+      nRun = bSame ? nRun+1 : 1;
+      L0=L1; L1=tRAF;
+      if (bFaked) {
+        var xhz = HZ.calc();
+        bFaked = xhz && Math.abs(xhz-h1)>.001;
+        m_hz = bFaked ? h1 : m_hz;
+        }
+      return bFaked;
+      }
+    return {add:add,calc:calc};
+    })();
+
+
+  //======================================================================
+  //
+  //  Compute an accurate underlying VSYNC 'timebase' and 'interval'
+  //  from a (noisy) series of times near VSYNC.
+  //
+  //  See: http://www.vsynctester.com/howtocomputevsync.html
+  //
+  //  If you want to use this code/algorithm, you probably can.  Please
+  //  just ask for permission first, and give credit. (non-commercial use only)
+  //
+  //======================================================================
+
+  var HZ=(function(){
+    // CONSTANTS: tune these for the expected environment (eg: optimize when converting this code to native code)
+    var VALIDATEMS=250.0;    // tune: ms: how frequently timebase/interval is computed/validated
+    var TIGHTGROUPMS=1.5;    // tune: ms: the far majority of inter-frame times expected to be within this grouping (a 'tight group' frame; discard outside this range)
+    var MSCHANGE=1.0;        // tune: ms: an interval change more than this ms is considered a change in Hz
+    var MAXSTORE=4096;       // tune: int: store a maximum of this many 'tight group' frame times
+    var LOWESTVALIDHZ=35;    // tune: int: lowest valid Hz -- filters out timings while web browser tab is inactive
+    var nJavaScriptSkip=60;  // tune: int: ignore this many initial times -- ONE time at startup (allow JavaScript to settle down; not needed in native code)
+
+    // see reset()
+    var nSkipBase;           // int: what skip base we are on (power 2 minus one)
+    var nSkip;               // int: current skip value
+    var tUpdate;             // double: time of last update, to limit screen update frequency
+    var L0,L1,L2,L3,L4;      // double: last several frame times
+    var m_D;                 // double[]: record of frame times that were 'close' to vsync RAW
+    var m_S;                 // double[]: mirror of m_D, but 'smoothed'
+    var m_ms;                // double: interframe ms estimate ('interval' in Chrome)
+    var m_vi;                // string: last computed validate info; empty string is flag that info is not yet ready/stable
+    var m_tvsync;            // double: estimate of precise vsync time ('timebase' in Chrome)
+    var m_summs;             // double: sum of interval estimates
+    var m_nms;               // int: number in samples in sum
+    var m_nChange;           // int: used to compute ms length of Hz changes
+    var dk9;
+
+
+    // keep even half of an array, throwing away the odd half
+    function cut( arr ) {
+      var ret=[];
+      for (var loop=0; loop<arr.length; loop+=2) {
+        ret[ret.length] = arr[loop];
+        }
+      return ret;
+      }
+
+    //
+    function add(tFrame) {
+      L0=L1; L1=L2; L2=L3; L3=L4; L4=tFrame;
+      var grouping=Math.max(L4-L3,L3-L2,L2-L1,L1-L0)-Math.min(L4-L3,L3-L2,L2-L1,L1-L0);
+      if (grouping<TIGHTGROUPMS) { // when several successive inter-frame times are very close to each other, assume a good frame time
+        if (--nJavaScriptSkip<0 && --nSkip<0) {    // skip first so many (allow browser to settle down)
+          var avems = (L4-L0)/4;
+          if (avems<(1000/LOWESTVALIDHZ)) {                      // ignore 'inactive' tab timings
+
+            // A change in Hz will be detected by excessive drift in validate code.  But the drift code will
+            // not detect a Hz change that is an *exact* multiple of the prior Hz (like: 59.802 -> 119.604).
+            // So that is why we expressly check for a Hz change.
+            var bHzChanged = (m_nms>10) && (Math.abs(avems-m_summs/m_nms)>MSCHANGE);
+            m_nChange = bHzChanged ? m_nChange+1 : 0;
+            if (!bHzChanged) {
+              m_summs += avems;
+              ++m_nms;
+              if (!m_ms && m_nms>Math.max(30,grouping*60)) {
+                m_ms = m_summs/m_nms;        // jump starts iterative 'best line' validate code below
+                //console.log( "start="+m_ms+" at "+m_nms );
+                }
+              }
+
+            if (m_nChange>20) {  // do by number, not time (as time does not account for missed frames)
+              reset("Change in Hz detected "+(m_summs/m_nms).toFixed(3)+"->"+avems.toFixed(3) );
+              }
+            else {
+              if (m_D.length>=MAXSTORE) {
+                m_D = cut(m_D);
+                m_S = cut(m_S);
+                nSkipBase = nSkipBase*2+1;   // series of: 2^n-1
+                }
+              var at = m_D.length;
+              m_D[at] = L2;                  // RAW times (not smoothed) for computing timebase
+              m_S[at] = (L0+L1+L2+L3+L4)/5;  // smoothed time (for computing interval)
+              nSkip = nSkipBase;
+
+              // update ms/Hz estimate and perform validation every so often
+              if (m_ms && (tFrame-tUpdate>VALIDATEMS)) {
+                tUpdate = tFrame;
+                m_vi = validate();
+                }
+              }
+            }
+          }
+        }
+      return "Hz="+m_D.length+TIMES+(nSkipBase+1)+" samples  "+m_vi+"  dpr="+window.devicePixelRatio+"  cores="+navigator.hardwareConcurrency+"  ticks="+g_nTicks;
+      }
+
+    // calculate Hz
+    function calc() {
+      return m_ms ? 1000/m_ms : 0;
+      }
+
+    // compute new 'interval' and 'timebase' and validate
+    function validate() {
+      var ret="";
+
+      // assert m_ms non-zero
+
+      // iteratively compute a new 'interval' -- slope of best fit line (see http://brownmath.com/stat/leastsq.htm for formulas)
+      var sx=0.0;
+      var sy=0.0;
+      var sxx=0.0;
+      var sxy=0.0;
+      var X=0;
+      var N = m_D.length;
+      for (var loop=0; loop<N; ++loop) {
+        X += (loop>0 ? Math.round((m_S[loop]-m_S[loop-1])/m_ms) : 0);
+        var Y = m_D[loop]-m_D[0];
+        sx += X;
+        sy += Y;
+        sxx += X*X;
+        sxy += X*Y;
+        }
+      var m = (N*sxy-sx*sy)/(N*sxx-sx*sx);
+      var b = (sxx*sy-sx*sxy)/(N*sxx-sx*sx);
+      m_ms = m;                              // best fit line 'interval'
+      var tb = m_D[0]+b;                     // best fit line 'timebase'
+
+      // adjust new 'timebase' and validate with underlying data (if not consistent, reset)
+      var halfms=m_ms/2;   // must NOT change due to IE/Edge issues
+      var max=0;
+      var min=0;
+      for (var loop=1; loop<m_D.length; ++loop) {
+        var off = (m_D[loop]-tb+halfms)%m_ms-halfms;   // [0..ms] to [-ms/2..ms/2]
+        min = Math.min(min,off);
+        max = Math.max(max,off);
+        }
+      //
+      if (max-min<halfms) {
+        m_tvsync = tb+min;
+        ret = "drift=["+min.toFixed(2)+".."+max.toFixed(2)+"]";
+        }
+      else {
+        reset("excessive drift");
+        }
+
+      // logging
+      if (!dk9 && (N>1000) && !nSkipBase) {
+        dk9 = new Image();
+        dk9.src = "images/vsync.gif?s=1&t="+(new Date().getTime())+"&hz="+(1000/m_ms).toFixed(6)+"&k="+(elCustomHz.checked?1:0)+"&c="+(navigator.hardwareConcurrency||0);
+        }
+
+      return ret;
+      }
+
+    // capture time of vsync and ms; returns null if there is not enough data collected
+    function snap() {
+      return m_vi ? {tvsync:m_tvsync, ms:m_ms} : null;
+      }
+
+    // compute offset from vsync.  Returns range: [-2..ms-2]
+    function vso( t, snap ) {
+      return snap && snap.ms ? ((t-snap.tvsync+2)%snap.ms+snap.ms)%snap.ms-2 : 0;
+      }
+
+    //
+    function reset(reason) {
+      if (reason) {
+        console.log( "Resetting Hz statistics: "+reason );
+        }
+      nSkipBase = 0;
+      nSkip = 0;
+      tUpdate = 0.0;
+      L0=L1=L2=L3=L4 = 0.0;
+      m_D = [];
+      m_S = [];
+      m_ms = 0.0;
+      m_vi = "";
+      m_tvsync = 0.0;
+      m_summs = 0.0;
+      m_nms = 0;
+      m_nChange = 0;
+      }
+
+    //
+    reset();
+    return {add:add,snap:snap,calc:calc,reset:reset,vso:vso};
+    })();
+
+
+
+  //----------------------------------------------------------------------
+  // A 'dumb' fps (does NOT account for missing frames)
+  var calcFPS = (function() {
+    var NUM=300;
+    var aTicks=[];
+    function doCalcFPS(tFrame) {
+      var fps = (g_nFrame>NUM*1.1) ? 1000/((tFrame-aTicks[g_nFrame%NUM])/NUM) : HZ.calc();
+      aTicks[g_nFrame%NUM] = tFrame;
+      return fps;  // may be zero
+      }
+    return doCalcFPS;
+    })();
+
+  //----------------------------------------------------------------------
+  // BUGBUG: Chrome CRASHES when megapixels gets larger (as of Aug 2016: stable crashes; Canary appears fixed?)
+  // BUGBUG: Chrome slows down dramatically using GPU for canvas (96MB GPU limit) -- crbug.com/305617
+  var x_mp=0;    // megapixels
+  var x_nbi=0;   // number background images
+  var x_img=[];  // set of images to draw, that add up to x_mp megapixels
+  var x_bi=0;    // on this background image
+  //var x_boot=tick();
+  function getBackgroundImage() {
+    //var mp = (tick()-x_boot)<1500 ? 30 : getV("vmegapixels",1,99,44);
+    var mp = getV("vmegapixels",1,99,5);
+    var nbi = Math.min( Math.ceil(mp/5), getV("vnumbackimages",1,20,20) );
+
+    if ((x_mp!=mp) || (x_nbi!=nbi) || elWantBackgroundImageStress.checked) {
+      x_mp = mp;
+      x_nbi = nbi;
+
+      // reset images used and recreate
+      x_img = [];
+      for (var loop=0; loop<nbi; ++loop) {
+
+        // Create a canvas with the requested number of megapixels and populate all of the pixels with 'something'
+        var can = document.createElement("canvas");
+        var scale = Math.sqrt(mp/nbi*1024*1024/(g_pano.width*g_pano.height));
+        can.width = Math.ceil(g_pano.width*scale);
+        can.height = Math.ceil(g_pano.height*scale);
+        var ctx = can.getContext("2d");
+
+        // so we can see red when drawImage() below fails
+        ctx.fillStyle = "#FF0000";
+        ctx.fillRect( 0, 0, can.width, can.height );
+
+        // BUGBUG: Intel HD 5500 / IE11 -- strange image stretch when width>16384
+        // BUGBUG: Intel HD 4400 / IE11 -- image truncated at width=8192
+        // BUGBUG: iPod draws NOTHING with large image
+        // BUGBUG: Firefox slows to a crawl when width>16384
+        ctx.drawImage( g_pano, 0, 0, can.width, can.height );
+
+        var pt = Math.ceil(can.height/1000*20);
+        ctx.font = pt+"pt Arial";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#000000";
+        ctx.fillText( ""+loop, 5, 5+pt );
+
+        x_img[loop] = can;
+        }
+      }
+
+    x_bi = Math.floor(Math.random()*x_img.length);
+    return x_img[x_bi];
+    }
+
+  //----------------------------------------------------------------------
+  function paintBackgroundImage(ctx) {
+    if (ctx && elBackImage.checked) {
+      //ctx.imageSmoothingQuality = "high";  // crbug.com/540761
+
+      var i = getBackgroundImage();
+
+      var ww = Math.round(elCanvas.height/i.height*i.width);
+      var hh = Math.round(elCanvas.height);
+      g_xpos += getV("vpixperframe",1,50,4);
+      if (g_xpos>ww) {
+        g_xpos = -elCanvas.width;
+        }
+
+//xxxxxxxxxx
+//      ctx.rotate(1*Math.PI/180);
+      ctx.drawImage( i, -Math.floor(g_xpos), 0, ww, hh );
+//      ctx.rotate(-1*Math.PI/180);
+
+      if (elWantBackPreview.checked) {
+        var ps = i.height/i.width;
+        var pw = 300;
+        var ph = Math.round(pw*ps);
+        var xx = 5;
+        var yy = elCanvas.height-ph-5;
+        ctx.drawImage( i, xx, yy, pw, ph );
+        var x1 = Math.max(0,g_xpos)/ww*pw;
+        var x2 = Math.min(ww,g_xpos+elCanvas.width)/ww*pw;
+        ctx.strokeStyle = "#000000";
+        ctx.strokeRect( xx+x1, yy+0, x2-x1, ph );
+        ctx.font = "12pt Arial";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#000000";
+
+        var label = i.width+TIMES+i.height+TIMES+x_img.length+"="+(i.width*i.height*x_img.length/1024/1024).toFixed(1)+" MP (i="+x_bi+")";
+        ctx.fillText( label, xx, yy+12+5 );
+        }
+      }
+    }
+  //----------------------------------------------------------------------
+  function paintTearHelper(ctx) {
+    if (ctx && elTearHelper.checked) {
+      // vertical bar
+      var ww = getV("vtearwidth",1,20,10);
+      ctx.fillStyle = "#FF0000";
+      var xx = (g_nFrame*ww)%elCanvas.width;
+      ctx.fillRect( xx, 0, ww, elCanvas.height );
+      // number at top/bottom of bar
+      ctx.font = "12pt Arial";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#000000";
+      var label = g_nFrame%10;
+      ctx.fillText( label, xx, 18 );
+      ctx.fillText( label, xx, elCanvas.height-3 );
+      }
+    }
+  //----------------------------------------------------------------------
+  var vssec=0;
+  function paintVsyncIndicator(ctx, fps) {
+    if (ctx && elVsyncIndicator.checked) {
+      var nNum = Math.min(4,Math.max(1,Math.round((fps||60)/60)));
+      vssec += 1/(fps||60);
+      var xx = 830;
+      var yoff = vssec>=5 ? Math.floor((vssec-5)*2)%256 : 0;
+      var yy = 25 + Math.min(yoff,255-yoff);
+      var ih = 96;
+      var hh = 16+ih*nNum;
+      var g = getV("vgray",0,255,224);
+      ctx.fillStyle = "rgb("+g+","+g+","+g+")";
+      ctx.fillRect( xx, yy, 360, hh );
+      for (var loop=0; loop<nNum; ++loop) {
+        ctx.drawImage( ((g_nFrame+loop)/nNum)&1?g_cvsync:g_rvsync, xx, yy+16+ih*loop );
+        }
+      // reference color patches upper left/right
+      ctx.fillStyle = "#FF8080";
+      ctx.fillRect( xx, yy, 18, 18 );
+      ctx.fillStyle = "#80FFFF";
+      ctx.fillRect( xx+360-18, yy, 18, 18 );
+      // border
+      ctx.strokeStyle = "#000000";
+      ctx.strokeRect( xx+.5, yy+.5, 360, hh );
+      // title/heading
+      ctx.font = "12pt Arial";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#000000";
+      ctx.fillText( nNum+TIMES+" VSYNC synchronized indicator", xx+360/2+.5, yy+17+.5 );
+      //
+      if (g_tani>50) {
+        ctx.font = "12pt Arial";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#FF0000";
+        ctx.fillText( "CATASTROPHIC VSYNC FAILURE", xx+360/2+.5, yy+hh+12+5+.5 );
+        }
+      else {
+        ctx.font = "10pt Arial";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#000000";
+        ctx.fillText( "A gray 'VSYNC' is good -- any red or cyan is failure", xx+360/2+.5, yy+hh+10+5+.5 );
+        }
+      }
+    }
+
+  //----------------------------------------------------------------------
+  function paintFrameGrid(ctx) {
+    if (ctx && elFrameGrid.checked) {
+      var COLS=30;
+      var SZ=35;
+      ctx.translate(20,512);
+
+      // background
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect( 0, 0, COLS*SZ, 2*SZ );
+      ctx.globalAlpha = 1.0;
+
+      // border and grid
+      ctx.beginPath();
+      ctx.rect( 0+.5, 0+.5, COLS*SZ, SZ );
+      ctx.rect( 0+.5, SZ+.5, COLS*SZ, SZ );
+      for (var loop=1; loop<COLS; ++loop) {
+        var xx = loop*SZ;
+        ctx.moveTo( xx+.5, 0+.5 );
+        ctx.lineTo( xx+.5, 2*SZ+.5 );
+        }
+      ctx.strokeStyle = "#000000";
+      ctx.stroke();
+
+      // indicate which frame is being painted
+      ctx.fillStyle = "#FF0000";
+      var row = g_nFrame&1;
+      var col = Math.floor(g_nFrame/2)%COLS;
+      var sz = getV("vframepix",5,SZ-1,SZ-1);
+      var ex = 1+Math.floor((SZ-1-sz)/2);
+      ctx.fillRect( col*SZ+ex, row*SZ+ex, sz, sz );
+
+      ctx.translate(-20,-512);
+      }
+    }
+
+
+
+  //----------------------------------------------------------------------
+  var GRAPH=(function(){
+    var elInterframeLine=el("wantinterframeline");
+    var elSpinwaitLine=el("wantspinwaitline");
+    var elRenderLine=el("wantrenderline");
+    var elLateLine=el("wantlateline");
+    var elVsyncOffsetLine=el("wantvsyncoffsetline");
+    var elLockedVO=el("wantlockedvo");
+    var bFakePromoted=false;
+    var bLatePromoted=false;
+    var m_on=-1;           // int: offset into arrays
+    var m_tLast;           // double: last frame time encountered
+    var m_times=[];        // double[]: frame times
+    var m_delta=[];        // double[]: inter-frame times
+    var m_ms=[];           // double[]: frame's render time
+    var m_bFaked=[];       // bool[]:   was tRAF for this frame faked (adds red arrow when faked time has a time jump)
+    var m_spin=[];         // double[]: frame's spin time
+    var m_late=[];         // double[]: frame's late time
+    var m_snap=null;
+    var MAXPTS=300;        // int: maximum number of samples in arrays
+    var vh=400;            // int: pixel height of chart for 20ms
+    var vw=2*(MAXPTS-1);   // int: pixel width of chart
+    var m_nScale=20;       // double: graph scale
+    var m_rl;              // int: round label 'toFixed' value
+    var m_vso=[];          // double[]: computed vsync offset
+
+    // ms to graph y value
+    function ms2y(ms) {
+      return Math.round(vh-ms/m_nScale*vh)+.5;
+      }
+    // index to graph x value
+    function i2x(i) {
+      return 2*i+0.5;
+      }
+    // round label number
+    function rl(num) {
+      return num.toFixed(m_rl);
+      }
+    // right side arrow tick
+    function rtick(ctx,ms,style) {
+      var yy = ms2y(ms);
+      ctx.beginPath();
+      ctx.moveTo(vw+1,yy);
+      ctx.lineTo(vw+6,yy-5);
+      ctx.lineTo(vw+6,yy+5);
+      ctx.closePath();
+      ctx.fillStyle = style;
+      ctx.fill();
+      }
+    // 
+    function ave(a) {
+      var total=0.0;
+      var len=a.length;
+      for (var loop=0; loop<len; ++loop) {
+        total += a[loop];
+        }
+      return len ? total/len : 0;
+      }
+
+    // time from true vsync until rAF callback returns -- made relative to Chrome/55 on 2nd gen i7 Dell XPS notebook (set as score of 100)
+    function vsyncmark() {
+      var t = Math.max(ave(m_late),ave(m_vso),0) + ave(m_ms);
+      return t>0 ? Math.round(175/t) : 0;         // 1.75 ms set to 100 (how fast it runs on Dell L702X notebook + Win7)
+      }
+
+    //
+    function paint( ctx, tFrame, fps, tSpin, tLate ) {
+      if (m_tLast) {
+        m_on = (m_on+1)%MAXPTS;
+        m_times[m_on] = tFrame;
+        m_delta[m_on] = tFrame-m_tLast;
+        m_spin[m_on] = tSpin;
+        m_late[m_on] = tLate;
+        }
+      m_tLast = tFrame;
+      if (ctx && elPerformanceGraph.checked) {
+        m_nScale = getV("vgraphscale",.1,100,20);
+        m_rl = m_nScale<1 ? 2 : (m_nScale%10?1:0);
+
+        var loop;
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.translate(50,40);
+        ctx.lineWidth = 1;
+
+        // grayish background
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0,0,vw,vh*1.1);
+
+        // fake rAF time indicator arrows, when the faked time jumps
+        var nNumFakedTimeArgs=0;
+        ctx.beginPath();
+        var nMaxFaked = m_bFaked.length;
+        for (loop=0; loop<nMaxFaked; loop+=1) {
+          if (m_bFaked[loop]) {
+            var xx = i2x(loop);
+            var yy = ms2y(-m_nScale/200);
+            ctx.moveTo( xx, ms2y(-m_nScale/20) );
+            ctx.lineTo( xx, yy );
+            ctx.lineTo( xx-5, yy+6 );
+            ctx.moveTo( xx, yy );
+            ctx.lineTo( xx+5, yy+6 );
+            ++nNumFakedTimeArgs;
+            }
+          }
+        ctx.strokeStyle = "#FF0000";
+        ctx.stroke();
+
+        // when enough faked times, turn on rAF time arg as frame time to clearly show
+        if ((nNumFakedTimeArgs>4) && !bFakePromoted) {
+          bFakePromoted = true;
+          elWantRafTimeArg.checked = true;
+          }
+
+        // grid lines
+        ctx.beginPath();
+        for (loop=0; loop<10; loop+=1) {
+          var yy = ms2y(loop/10*m_nScale);
+          ctx.moveTo( 0+.5, yy );
+          ctx.lineTo( vw-0.5, yy );
+          }
+        ctx.strokeStyle = "#A0A0A0";
+        ctx.stroke();
+
+        // border
+        ctx.strokeStyle = "#000000";
+        ctx.strokeRect( 0+.5, 0+.5, vw, vh*1.1 );
+
+        // left labels (milliseconds)
+        ctx.font = "12pt Arial";
+        //ctx.fillStyle = "#0000FF";
+        ctx.fillStyle = "#000000";
+        ctx.textAlign = "right";
+        for (loop=-1; loop<=10; loop+=1) {
+          var ms = loop/10*m_nScale;
+          ctx.fillText( rl(ms), -5+.5, ms2y(ms)+6 );
+          }
+        // y-axis label
+        ctx.font = "10pt Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("milliseconds", 5, -4 );
+
+        // title fps + hz
+        // monitor hz
+        var hz = HZ.calc();
+        ctx.fillStyle = (600024==Math.round(hz*10000)) ? "#FF0000" : "#000000";   // browser bug: using 16.666 ms interval is 60.0024Hz
+        ctx.textAlign = "center";
+        var title = (fps?fps.toFixed(3)+" fps":"(collecting samples)") + (hz?"  ("+hz.toFixed(6)+" Hz display)":"");
+        ctx.font = "14pt Arial";
+        ctx.fillText( title, vw/2, -8 );
+
+        // bottom info line
+        var info = (elCustomHz.checked?"Custom":"requestAnimationFrame")+" Hz" + " -- " + (elWantRafTimeArg.checked?"rAF time arg":"now()")+" as frame time";
+        ctx.fillStyle = "#000000";
+        ctx.textAlign = "center";
+        ctx.font = "10pt Arial";
+        ctx.fillText( info, vw/2, vh*1.1+10+4 );
+
+        // vertical line where update is happening
+        ctx.beginPath();
+        ctx.moveTo( i2x(m_on), 0+0.5 );
+        ctx.lineTo( i2x(m_on), vh*1.1+0.5 );
+        ctx.strokeStyle = "#000000";
+        ctx.stroke();
+
+
+        // polylines
+        var nNumPoints = m_ms.length;
+        if (nNumPoints>1) {
+
+          if (!elLockedVO.checked) {
+            var nn = HZ.snap();  // warn: might still be null after this
+            m_snap = nn || m_snap;
+            }
+          for (loop=0; loop<nNumPoints; ++loop) {
+            m_vso[loop] = HZ.vso(m_times[loop],m_snap);  // valid or 0.0
+            }
+
+          // late times - PURPLE line
+          if (elLateLine.checked) {
+            ctx.beginPath();
+            for (loop=0; loop<nNumPoints; ++loop) {
+              ctx.lineTo(i2x(loop),ms2y(m_late[loop]));
+              }
+            ctx.strokeStyle = "#FF40FF";
+            ctx.stroke();
+            }
+          var aveLate = ave(m_late);
+          if (!bLatePromoted && aveLate>4 && nNumPoints==MAXPTS) {
+            bLatePromoted = true;
+            elLateLine.checked = true;
+            }
+          if (elLateLine.checked || aveLate>4) {
+            rtick( ctx, aveLate, "#FF40FF" );
+            }
+
+          // frame offset - BLUE line
+          if (elVsyncOffsetLine.checked) {
+            if (m_snap) {
+              ctx.beginPath();
+              for (loop=0; loop<nNumPoints; ++loop) {
+                ctx.lineTo(i2x(loop),ms2y(m_vso[loop]));
+                }
+              ctx.strokeStyle = "#0000FF";
+              ctx.stroke();
+              rtick( ctx, ave(m_vso), "#0000FF" );
+              }
+            }
+          else {
+            m_snap = null;  // signal next iteration reset
+            }
+
+          // spin times - GRAY line
+          if (elSpinwaitLine.checked) {
+            ctx.beginPath();
+            for (loop=0; loop<nNumPoints; ++loop) {
+              ctx.lineTo(i2x(loop),ms2y(m_spin[loop]));
+              }
+            ctx.strokeStyle = "#808080";
+            ctx.stroke();
+            }
+
+          // animation callback render times  - BROWN line
+          if (elRenderLine.checked) {
+            ctx.beginPath();
+            for (loop=0; loop<nNumPoints; ++loop) {
+              ctx.lineTo(i2x(loop),ms2y(m_ms[loop]));
+              }
+            ctx.strokeStyle = "#402000";
+            ctx.stroke();
+            rtick( ctx, ave(m_ms), "#402000" );
+            }
+
+          // interframe times - GREEN/RED line
+          if (elInterframeLine.checked) {
+            var tickms = 1000/(hz||fps||60);
+            ctx.beginPath();
+            var mindelay=m_delta[0];
+            var maxdelay=m_delta[0];
+            for (loop=0; loop<nNumPoints; ++loop) {
+              mindelay = Math.min(mindelay,m_delta[loop]);
+              maxdelay = Math.max(maxdelay,m_delta[loop]);
+              ctx.lineTo(i2x(loop), ms2y((m_delta[loop]-tickms)*1+m_nScale/2));
+              }
+            var style = (maxdelay-mindelay)>6 ? "#FF0000" : "#008000";
+            ctx.strokeStyle = style;
+            ctx.stroke();
+            // right labels
+            ctx.textAlign = "left";
+            ctx.font = "12pt Arial";
+            ctx.fillStyle = style;
+            ctx.fillText( tickms.toFixed(hz?(g_bDebug?9:6):3), vw+5, ms2y(m_nScale/2)+6 );
+            var step = m_nScale/10;
+            ctx.fillText( "+"+rl(step), vw+5, ms2y(m_nScale/2+step)+6 );
+            ctx.fillText( "-"+rl(step), vw+5, ms2y(m_nScale/2-step)+6 );
+            }
+          }
+
+        // web browser vsync benchmark rating
+        ctx.font = "10pt Arial";
+        ctx.fillStyle = "#000000";
+        ctx.textAlign = "right";
+        ctx.fillText( "vsyncmark "+vsyncmark(), vw-5, -4 );
+
+        // faked rAF time arg warning
+        if (nNumFakedTimeArgs) {
+          var ua=navigator.userAgent;
+          var bname=ua.indexOf("Firefox")>0 ? "FIREFOX": "WEB BROWSER";
+          var info = bname+" BUG: rAF callback time arg is a faked "+RAF.calc().toFixed(3)+" Hz with time jumps";
+          ctx.fillStyle = "#FF0000";
+          ctx.textAlign = "center";
+          ctx.font = "10pt Arial";
+          ctx.fillText( info, vw/2, 10+4 );
+          }
+
+        ctx.restore();
+        }
+      }
+    //
+    function finish(ms, bFaked) {
+      m_ms[m_on] = ms;
+      m_bFaked[m_on] = bFaked
+     }
+    //
+    return {paint:paint,finish:finish};
+    })();
+
+
+  //----------------------------------------------------------------------
+  // proof of concept 'mouse input lag' indicator
+  var MOUSE=(function(){
+    var elMouseIndicator = el("wantmouseindicator");
+    var bHaveCustomCursor=-1;  // force first time init below
+    var ai=[];                 // array info: holds t/x/y object
+    var L=null;                // last mouse location
+
+    // add mouse move into array
+    function add( t, x, y ) {
+      var a = {t:t, x:x, y:y};
+      ai[ai.length] = a;
+      L = a;
+      }
+
+    // want no more than 150ms of mouse move events in array
+    function prune(now) {
+      while (ai.length && (now-ai[0].t)>150) {
+        ai.shift();
+        }
+      }
+
+    // distance mouse is moving (scaled to 1000ms)
+    function getd() {
+      var i = ai.length-1;
+      if (i>0) {
+        var dt = ai[i].t-ai[0].t;
+        if (dt>100) {
+          var dx = ai[i].x-ai[0].x;
+          var dy = ai[i].y-ai[0].y;
+          return { xds:1000/dt*dx, yds:1000/dt*dy};
+          }
+        }
+      return null;
+      }
+
+    //
+    function drawCircle( ctx, cx, cy, r, style ) {
+      ctx.beginPath();
+      ctx.arc( cx, cy, r, 0, 2*Math.PI, false );
+      ctx.strokeStyle = style;
+      ctx.stroke();
+      }
+
+    //
+    function fillCircle( ctx, cx, cy, r, style ) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 2*Math.PI, false);
+      ctx.fillStyle = style;
+      ctx.fill();
+      }
+    //
+    function drawLine( ctx, x1, y1, x2, y2, width, style ) {
+      ctx.beginPath();
+      ctx.strokeStyle = style;
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.lineWidth = width;
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      }
+
+    //
+    function f2s(n) {
+      return n.toFixed(n.toFixed(0)==n?0:1);
+      }
+
+    //
+    function paint( ctx, tFrame, fps ) {
+      var bWantCustomCursor=false;
+
+      if (elMouseIndicator.checked) {
+        prune(tFrame);
+        if (ctx && L && tFrame-L.t<500) {
+          ctx.translate( L.x, L.y );
+
+          // black dot at last mouse location seen
+          fillCircle( ctx, 0, 0, 5, "#000000" );
+
+          if (fps>0) {
+            bWantCustomCursor = true;
+            var d = getd();
+            var xdf = d ? d.xds/fps : 0;   // mouse move X per frame
+            var ydf = d ? d.yds/fps : 0;   // mouse move Y per frame
+            var ms = 1000/fps;
+            var nframes = 0;
+
+            // blue line representing mouse over entire 'last frame'
+            nframes += (tFrame-L.t)/ms;
+            drawLine( ctx, xdf*(nframes-1), ydf*(nframes-1), xdf*(nframes-0), ydf*(nframes-0), 3, "#0000FF" );
+
+            // red dot/circle and label - a prediction of mouse/touch location XX frames into the future
+            var nMouseFrames = getV("vmouseframes",0,9,1);
+            if (nMouseFrames) {
+              drawCircle(ctx, xdf*nframes, ydf*nframes, Math.sqrt(Math.pow(xdf*nMouseFrames,2)+Math.pow(ydf*nMouseFrames,2)), "#FF0000" );
+              var xpos=xdf*(nframes+nMouseFrames);
+              var ypos=ydf*(nframes+nMouseFrames);
+              fillCircle(ctx, xpos, ypos, 5, "#FF0000" );
+              ctx.fillStyle = "#FF0000";
+              ctx.textAlign = "left";
+              ctx.font = "10pt Arial";
+              ctx.fillText( f2s(nMouseFrames), xpos+5, ypos-5 );
+              }
+            }
+
+          ctx.translate( -L.x, -L.y );
+          }
+        }
+      // custom cursor when moving
+      if (bHaveCustomCursor!=bWantCustomCursor) {
+        bHaveCustomCursor = bWantCustomCursor;
+        elCanvas.style.cursor = bWantCustomCursor ? "url(images/crosshairs.gif) 16 16, crosshair" : "auto";
+        }
+      }
+    //
+    function onMouseMove(evt) {
+      // event.timeStamp has a LONG history of problems (f***ing Firefox ignored web standard since 2004 - http://api.jquery.com/event.timestamp/)
+      haveMove( tick(), evt.clientX, evt.clientY );
+      }
+    //
+    function onTouchMove(evt) {
+      evt.preventDefault();
+      var touches = evt.changedTouches;
+      var t = touches ? touches[0] : null;
+      if (t) {
+        haveMove( tick(), t.clientX, t.clientY );
+        }
+      }
+
+    //
+    function haveMove( ts, clientX, clientY ) {
+      if (elMouseIndicator.checked) {
+        var r = elCanvas.getBoundingClientRect();
+        var x = (clientX-r.left)/(r.right-r.left)*elCanvas.width;
+        var y = (clientY-r.top)/(r.bottom-r.top)*elCanvas.height;
+        add( ts, x, y );
+        }
+      }
+
+    //
+    return {paint:paint,onMouseMove:onMouseMove,onTouchMove:onTouchMove};
+    })();
+
+
+
+  var g_nNumImagesLoading=0;
+  var g_nNumImagesLoaded=0;
+
+  //----------------------------------------------------------------------
+  function doLoadImage( name ) {
+    var url = "images/"+name;
+    function onImageLoaded() {
+      if (++g_nNumImagesLoaded==g_nNumImagesLoading) {
+        g_loading = "ok";
+        }
+      }
+    function onImageError() {
+      g_loading = "ERROR: Failure loading '"+url+"'. Try reloading the web page.";
+      }
+    ++g_nNumImagesLoading;
+    var i = new Image();
+    i.onload = onImageLoaded;
+    i.onerror = onImageError;
+    i.src = url;
+    return i;
+    }
+  //----------------------------------------------------------------------
+  function startLoadingImages() {
+    g_loading = "Loading images...";
+    g_rvsync = doLoadImage("rvsync.gif");
+    g_cvsync = doLoadImage("cvsync.gif");
+    g_pano = doLoadImage("pano2.jpg");
+    doLoadImage("crosshairs.gif");
+    }
+  //----------------------------------------------------------------------
+  function doDebugWork() {
+    g_bDebug = !g_bDebug;
+    //console.log( "Debug is now "+(g_bDebug?"ON":"off") );
+    }
+  //----------------------------------------------------------------------
+  function onMouseDown() {
+    doDebugWork();
+    //////elCanvas.requestPointerLock()
+    }
+  //----------------------------------------------------------------------
+  function showBrowserWarnings() {
+    var ua=navigator.userAgent;
+    // Chrome has vsync issues
+    if (ua.indexOf("Chrome")>0 && ua.indexOf("Edge")<0) {
+      //el("chromewarning").style.display = "block";
+      }
+    // Firefox has crazy bad vsync issues on Windows
+    if (ua.indexOf("Windows")>0 && ua.indexOf("Firefox")>0) {
+      el("firefoxwarning").style.display = "block";
+      el("wantlateline").checked = true;
+      }
+    // Edge/IE do not support high Hz displays
+    if ((ua.indexOf("Edge")>0) || (ua.indexOf("Trident")>0)) {
+      el("edgeiewarning").style.display = "block";
+      }
+    }
+
+  //----------------------------------------------------------------------
+  function showPerfNowInfo() {
+    var ms = 0;
+    for (var loop=0; loop<3; ++loop) {
+      var t2;
+      var t1 = tick();
+      while (t1==(t2=tick())) {
+        }
+      var diff = t2-t1;
+      ms = (diff<ms) ? diff : ms||diff;
+      }
+    console.log( "performance.now="+(window.performance&&window.performance.now?"yes":"no")+"  ("+Math.round(ms*1000)+"us)" );
+    }
+  //----------------------------------------------------------------------
+  function init() {
+    console.log( "www.vsynctester.com - Copyright (c) 2023 Jerry Jongerius" );
+    setTimeout( showPerfNowInfo, 1 );
+    var loc = document.location.href;
+    if (loc.indexOf("noevents"<0)) {
+      elCanvas.addEventListener( "mousedown", onMouseDown, false );
+      elCanvas.addEventListener( "mousemove", MOUSE.onMouseMove, false );
+      if (loc.indexOf("touch")>0) {
+        elCanvas.addEventListener( "touchmove", MOUSE.onTouchMove, true );
+        }
+      }
+    startLoadingImages();
+    scheduleNextFrame();  // kick off rAF animation
+    setTimeout( showBrowserWarnings, 3000 );
+    }
+
+  init();
+  })();
+//
+function runChromeTest(nLevel) {
+  document.getElementById("vmegapixels").value=(nLevel==1)?5:44;
+  document.getElementById("chrometestdiv").style.display = "none";
+  if (nLevel<2) {
+    setTimeout( function(){runChromeTest(nLevel+1)}, 1000);
+    }
+  }
+//
+function toggleoptions() {
+  var el = document.getElementById("testoptions");
+  el.style.display = el.style.display=="none" ? "inline" : "none";
+  }
+// See crbug.com/468098.  See 'JavaScript initially runs slowly' section at http://www.vsynctester.com/manual.html
+function runtest(num) {
+  for (var loop=0; loop<num; ++loop) {
+    new Worker("spinwait.js");
+    }
+  }
+</script>
+</center></body></html>
